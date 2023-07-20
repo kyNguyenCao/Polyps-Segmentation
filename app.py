@@ -5,6 +5,7 @@ import cv2
 import torch.nn as nn
 import timm
 import albumentations as A
+import requests
 from albumentations.pytorch import ToTensorV2  # np.array -> torch.Tensor
 
 IMG_SIZE = 256
@@ -59,11 +60,17 @@ class UNet(nn.Module):
 
 def main():
     st.title('Image Segmentation App')
+
+    weights_url = 'https://drive.google.com/file/d/1fIW6vf49qfmIW06KAU89PHNqyy8uG4V6/view?usp=sharing'
+    response = requests.get(weights_url)
+    with open('model_weights.pth', 'wb') as f:
+        f.write(response.content)
+
     uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
     if uploaded_image is not None:
         model = UNet(1).to(DEVICE)
-        checkpoint = torch.load("weights/custom_unet_with_resnet152_backboned.pth", map_location=torch.device('cpu'))
+        checkpoint = torch.load("model_weights.pth", map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
 
