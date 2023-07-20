@@ -5,11 +5,11 @@ import cv2
 import torch.nn as nn
 import timm
 import albumentations as A
-import requests
+import gdown
 from albumentations.pytorch import ToTensorV2  # np.array -> torch.Tensor
 
 IMG_SIZE = 256
-DEVICE = 'cpu'
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 test_transform = A.Compose([
     A.Resize(width=IMG_SIZE, height=IMG_SIZE),
@@ -58,19 +58,28 @@ class UNet(nn.Module):
         return x
 
 
+@st.cache_resource
+def download_weights(url):
+    gdown.download(url, "model_weights.pth", quiet=False)
+
+
+@st.cache_resource
+def load_model():
+    print(" MODEL LOADED !!!")
+    return torch.load("model_weights.pth", map_location=DEVICE)
+
+
 def main():
     st.title('Image Segmentation App')
 
-    weights_url = 'https://drive.google.com/file/d/1fIW6vf49qfmIW06KAU89PHNqyy8uG4V6/view?usp=sharing'
-    response = requests.get(weights_url)
-    with open('model_weights.pth', 'wb') as f:
-        f.write(response.content)
-
+    url = "https://drive.google.com/uc?export=download&id=1fIW6vf49qfmIW06KAU89PHNqyy8uG4V6"
     uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
     if uploaded_image is not None:
+        download_weights(url)
+        checkpoint = load_model()
+
         model = UNet(1).to(DEVICE)
-        checkpoint = torch.load("model_weights.pth", map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
 
